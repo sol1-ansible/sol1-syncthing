@@ -11,79 +11,99 @@
   register: _syncthing_existing_folders
   changed_when: false
 
-- name: Configure sync folders
-  block:
-    - name: Set folder facts
-      ansible.builtin.set_fact:
-        _folder_path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
-        _folder_owner: "{{ folder.owner | default(syncthing_user) }}"
-        _folder_group: "{{ folder.group | default(syncthing_group) }}"
-        _folder_mode: "{{ folder.mode | default('0755') }}"
-        _folder_create: "{{ folder.create | default(true) }}"
-        _folder_type: "{{ folder.type | default('sendonly') }}"
-
-    - name: Create sync directory (when specified)
-      ansible.builtin.file:
-        path: "{{ _folder_path }}"
-        state: directory
-        owner: "{{ _folder_owner }}"
-        group: "{{ _folder_group }}"
-        mode: "{{ _folder_mode }}"
-      become: true
-      when: _folder_create | bool
-
-    - name: Verify existing sync directory exists
-      ansible.builtin.stat:
-        path: "{{ _folder_path }}"
-      register: _folder_stat
-      when: not (_folder_create | bool)
-
-    - name: Fail if directory does not exist
-      ansible.builtin.fail:
-        msg: "Sync directory {{ _folder_path }} does not exist"
-      when:
-        - not (_folder_create | bool)
-        - not _folder_stat.stat.exists
-
-    - name: Ensure Syncthing user has access to folder
-      ansible.builtin.acl:
-        path: "{{ _folder_path }}"
-        entity: "{{ syncthing_user }}"
-        etype: user
-        permissions: rwx
-        state: present
-      become: true
-      when: _folder_owner != syncthing_user
-
-    - name: Add folder to Syncthing configuration
-      ansible.builtin.command:
-        cmd: >
-          {{ syncthing_binary_path }} cli config folders add
-          --id {{ folder.id }}
-          --label {{ folder.label | default(folder.id) }}
-          --path {{ _folder_path }}/
-          --type {{ _folder_type }}
-          --rescan-intervals {{ folder.rescan_interval | default(300) }}
-      become: true
-      become_user: "{{ syncthing_user }}"
-      when: folder.id not in _syncthing_existing_folders.stdout
-      changed_when: true
-
-    - name: Share folder with replica devices
-      ansible.builtin.command:
-        cmd: "{{ syncthing_binary_path }} cli config folders {{ folder.id }} devices add --device-id {{ device_id }}"
-      become: true
-      become_user: "{{ syncthing_user }}"
-      when: folder.devices is defined
-      changed_when: true
-      register: _share_folder_result
-      failed_when:
-        - _share_folder_result.rc != 0
-        - "'already shared' not in _share_folder_result.stderr | default('')"
-      loop: "{{ folder.devices }}"
-      loop_control:
-        loop_var: device_id
-
+- name: Set folder facts
+  ansible.builtin.set_fact:
+    _folder_path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
+    _folder_owner: "{{ folder.owner | default(syncthing_user) }}"
+    _folder_group: "{{ folder.group | default(syncthing_group) }}"
+    _folder_mode: "{{ folder.mode | default('0755') }}"
+    _folder_create: "{{ folder.create | default(true) }}"
+    _folder_type: "{{ folder.type | default('sendonly') }}"
   loop: "{{ syncthing_folders }}"
   loop_control:
     loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Create sync directory (when specified)
+  ansible.builtin.file:
+    path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
+    state: directory
+    owner: "{{ folder.owner | default(syncthing_user) }}"
+    group: "{{ folder.group | default(syncthing_group) }}"
+    mode: "{{ folder.mode | default('0755') }}"
+  become: true
+  when: folder.create | default(true) | bool
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Verify existing sync directory exists
+  ansible.builtin.stat:
+    path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
+  register: _folder_stat
+  when: not (folder.create | default(true) | bool)
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Fail if directory does not exist
+  ansible.builtin.fail:
+    msg: "Sync directory {{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }} does not exist"
+  when:
+    - not (folder.create | default(true) | bool)
+    - _folder_stat.results[folder_idx].stat is defined
+    - not _folder_stat.results[folder_idx].stat.exists
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    index_var: folder_idx
+    label: "{{ folder.id }}"
+
+- name: Ensure Syncthing user has access to folder
+  ansible.builtin.acl:
+    path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
+    entity: "{{ syncthing_user }}"
+    etype: user
+    permissions: rwx
+    state: present
+  become: true
+  when: folder.owner | default(syncthing_user) != syncthing_user
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Add folder to Syncthing configuration
+  ansible.builtin.command:
+    cmd: >
+      {{ syncthing_binary_path }} cli config folders add
+      --id {{ folder.id }}
+      --label {{ folder.label | default(folder.id) }}
+      --path {{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}/
+      --type {{ folder.type | default('sendonly') }}
+      --rescan-intervals {{ folder.rescan_interval | default(300) }}
+  become: true
+  become_user: "{{ syncthing_user }}"
+  when: folder.id not in _syncthing_existing_folders.stdout
+  changed_when: true
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Share folder with devices
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config folders {{ item.0.id }} devices add --device-id {{ item.1 }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  when: item.0.devices is defined
+  changed_when: true
+  register: _share_folder_result
+  failed_when:
+    - _share_folder_result.rc != 0
+    - "'already shared' not in _share_folder_result.stderr | default('')"
+  loop: "{{ syncthing_folders | subelements('devices', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.id }} -> {{ item.1 }}"
