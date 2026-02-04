@@ -1,0 +1,10 @@
+---
+# Installation packages
+syncthing_packages:
+  - curl
+  - syncthing
+  - python3-lxml
+  - acl
+
+syncthing_binary_path: "/usr/bin/syncthing"
+syncthing_service_file: "/etc/systemd/system/syncthing.service"

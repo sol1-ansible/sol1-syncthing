@@ -1,0 +1,19 @@
+---
+# handlers file for sol1-syncthing
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: "reload systemd"
+
+- name: Restart syncthing
+  ansible.builtin.systemd:
+    name: "{{ syncthing_service_name }}.service"
+    state: restarted
+  listen: "restart syncthing"
+
+- name: Start syncthing
+  ansible.builtin.systemd:
+    name: "{{ syncthing_service_name }}.service"
+    state: started
+  listen: "start syncthing"

@@ -1,0 +1,64 @@
+---
+# defaults file for sol1-syncthing
+
+# Syncthing GUI credentials
+syncthing_gui_user: "admin"
+syncthing_gui_password: ""
+
+# Syncthing devices to pair with
+syncthing_devices: []
+# Example:
+# syncthing_devices:
+#   - id: "XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX"
+#     name: "replica-host"
+#     auto_accept: true
+
+# Syncthing folders to sync
+syncthing_folders: []
+# Example:
+# syncthing_folders:
+#   - id: "backup"
+#     label: "System Backups"
+#     path: "/var/backups"
+#     owner: "backup"
+#     group: "backup"
+#     mode: "0755"
+#     create: false
+#     type: "sendonly"
+#     rescan_interval: 300
+#     devices:
+#       - "DEVICE_ID_1"
+#       - "DEVICE_ID_2"
+#   - id: "shared_data"
+#     label: "Shared Data"
+#     path: "/opt/data"
+#     owner: "www-data"
+#     group: "www-data"
+#     mode: "0770"
+#     create: true
+#     type: "receiveonly"
+#     rescan_interval: 300
+#     devices:
+#       - "DEVICE_ID_1"
+
+# Syncthing storage configuration
+syncthing_storage_root_dir: "/srv/syncthing"
+
+# Syncthing service user
+syncthing_user: "syncthing"
+syncthing_group: "syncthing"
+syncthing_user_uid: 9001
+
+# Syncthing configuration paths
+syncthing_config_dir: "/home/{{ syncthing_user }}/.config/syncthing"
+syncthing_config_file: "{{ syncthing_config_dir }}/config.xml"
+
+# Syncthing API settings
+syncthing_api_url: "https://localhost:8384"
+syncthing_api_verify_ssl: false
+
+# Service settings
+syncthing_service_name: "syncthing"
+syncthing_service_enabled: true
+syncthing_service_state: "started"
+

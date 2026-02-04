@@ -4,8 +4,8 @@ Documentation=man:syncthing(1)
 After=network.target
 
 [Service]
-User=syncthing
-ExecStart=/usr/bin/syncthing serve --no-browser --no-restart --logflags=0
+User={{ syncthing_user }}
+ExecStart={{ syncthing_binary_path }} serve --no-browser --no-restart --logflags=0
 Restart=on-failure
 SuccessExitStatus=3 4
 RestartForceExitStatus=3 4
@@ -20,4 +20,3 @@ ProtectControlGroups=true
 
 [Install]
 WantedBy=multi-user.target
-

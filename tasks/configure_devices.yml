@@ -1,0 +1,48 @@
+---
+- name: Store device ID in global map on localhost
+  ansible.builtin.set_fact:
+    syncthing_device_map: "{{ syncthing_device_map | default({}) | combine({inventory_hostname: syncthing_device_id}) }}"
+  delegate_to: localhost
+  delegate_facts: true
+  when: syncthing_devices | default([]) | length == 0
+
+- name: Build list of remote devices from global map
+  ansible.builtin.set_fact:
+    syncthing_devices: "{{ syncthing_devices | default([]) + [{'id': hostvars['localhost'].syncthing_device_map[item], 'name': item, 'auto_accept': true}] }}"
+  loop: "{{ ansible_play_hosts | default([]) }}"
+  when:
+    - syncthing_devices | default([]) | length == 0
+    - hostvars['localhost'].syncthing_device_map is defined
+    - item in hostvars['localhost'].syncthing_device_map
+
+- name: Get existing devices
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config devices list"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  register: _syncthing_devices_result
+  changed_when: false
+
+- name: Add replica devices to Syncthing configuration
+  ansible.builtin.command:
+    cmd: >
+      {{ syncthing_binary_path }} cli config devices add
+      --device-id {{ device.id }}
+      --name {{ device.name }}
+  become: true
+  become_user: "{{ syncthing_user }}"
+  when: device.id not in _syncthing_devices_result.stdout
+  changed_when: true
+  loop: "{{ syncthing_devices }}"
+  loop_control:
+    loop_var: device
+
+- name: Configure auto-accept for replica devices
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config devices {{ device.id }} auto-accept-folders set {{ device.auto_accept | default(true) | string | lower }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+  loop: "{{ syncthing_devices }}"
+  loop_control:
+    loop_var: device

@@ -1,0 +1,29 @@
+---
+- name: Load OS-specific variables
+  ansible.builtin.include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_distribution | lower }}.yml"
+        - "{{ ansible_os_family | lower }}.yml"
+        - "default.yml"
+      paths:
+        - "{{ role_path }}/vars"
+
+- name: Verify required variables are defined
+  ansible.builtin.assert:
+    that:
+      - syncthing_gui_user is defined
+      - syncthing_gui_user | length > 0
+    fail_msg: "syncthing_gui_user must be defined and not empty"
+    success_msg: "syncthing_gui_user is properly set"
+
+- name: Verify syncthing_gui_password is defined
+  ansible.builtin.assert:
+    that:
+      - syncthing_gui_password is defined
+      - syncthing_gui_password | length > 0
+    fail_msg: "syncthing_gui_password must be defined and not empty"
+    success_msg: "syncthing_gui_password is properly set"
+  no_log: true

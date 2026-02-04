@@ -1,0 +1,36 @@
+---
+# Configure the Syncthing application settings (GUI credentials, API, devices)
+
+- name: Wait for Syncthing API to be available
+  ansible.builtin.uri:
+    url: "{{ syncthing_api_url }}/rest/config"
+    method: GET
+    return_content: true
+    headers:
+      X-API-Key: "{{ syncthing_api_key }}"
+    validate_certs: "{{ syncthing_api_verify_ssl }}"
+    status_code: 200
+    body_format: json
+  register: _syncthing_verification_result
+  until: _syncthing_verification_result.status == 200
+  retries: 5
+  delay: 10
+
+- name: Configure Syncthing GUI user
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config gui user set {{ syncthing_gui_user }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+  register: _gui_user_result
+  failed_when:
+    - _gui_user_result.rc != 0
+    - "'already exists' not in _gui_user_result.stderr | default('')"
+
+- name: Configure Syncthing GUI password
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config gui password set {{ syncthing_gui_password }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+  no_log: true

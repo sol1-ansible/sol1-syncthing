@@ -1,0 +1,38 @@
+---
+- name: Install syncthing and dependencies
+  ansible.builtin.apt:
+    name: "{{ syncthing_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+
+- name: Ensure syncthing system user exists
+  ansible.builtin.user:
+    name: "{{ syncthing_user }}"
+    uid: "{{ syncthing_user_uid }}"
+    group: "{{ syncthing_group }}"
+    shell: /sbin/nologin
+    system: true
+    create_home: true
+  become: true
+
+- name: Ensure syncthing systemd service file exists
+  ansible.builtin.template:
+    src: syncthing.service.j2
+    dest: "{{ syncthing_service_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - reload systemd
+    - restart syncthing
+
+- name: Ensure Syncthing service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ syncthing_service_name }}.service"
+    enabled: "{{ syncthing_service_enabled }}"
+    state: "{{ syncthing_service_state }}"
+    daemon_reload: true
+  become: true
