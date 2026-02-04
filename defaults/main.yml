@@ -51,7 +51,7 @@ syncthing_user_uid: 9001
 syncthing_group_gid: 9001  # Optional: set a specific GID
 
 # Syncthing configuration paths
-syncthing_config_dir: "/home/{{ syncthing_user }}/.config/syncthing"
+syncthing_config_dir: "/home/{{ syncthing_user }}/.local/syncthing"
 syncthing_config_file: "{{ syncthing_config_dir }}/config.xml"
 
 # Syncthing API settings
