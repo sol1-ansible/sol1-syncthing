@@ -1,0 +1,22 @@
+---
+- name: Extract API Key from Syncthing config
+  community.general.xml:
+    path: /home/syncthing/.config/syncthing/config.xml
+    xpath: /configuration/gui/apikey
+    content: text
+  register: syncthing_api_key
+
+- name: Set API Key fact
+  set_fact:
+    syncthing_api_key: "{{ syncthing_api_key.matches[0].apikey }}"
+
+- name: Extract Device ID from local Syncthing config
+  community.general.xml:
+    path: /home/syncthing/.config/syncthing/config.xml
+    xpath: "/configuration/folder/device"
+    content: attribute
+  register: syncthing_device_id
+
+- name: Set Device ID fact
+  set_fact:
+    syncthing_device_id: "{{ syncthing_device_id.matches[0].device.id }}"

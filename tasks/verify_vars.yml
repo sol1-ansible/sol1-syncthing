@@ -1,0 +1,10 @@
+---
+- name: Checking Syncthing GUI User variable is set.
+  ansible.builtin.fail:
+    msg: Syncthing GUI User variable is not Defined.
+  when: syncthing_gui_user is not defined
+
+- name: Checking Syncthing GUI Password variable is set.
+  ansible.builtin.fail:
+    msg: Syncthing GUI User variable is not Defined.
+  when: syncthing_gui_password is not defined

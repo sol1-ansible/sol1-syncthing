@@ -1,0 +1,18 @@
+---
+- name: Verify Syncthing User and Password vars are set
+  include_tasks: verify_vars.yml
+
+- name: Install Syncthing and Setup Service
+  include_tasks: setup_service.yml
+
+- name: Grab API and Device ID vars from local config
+  include_tasks: extract_from_local_config.yml
+
+- name: Update the Syncthing GUID in Netbox
+  include_tasks: update_netbox.yml
+
+- name: Query Netbox for Replica Partner details
+  include_tasks: query_netbox.yml
+
+- name: Configure Syncthing Replicas
+  include_tasks: configure.yml

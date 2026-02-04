@@ -1,0 +1,28 @@
+---
+- name: Query Docker Hosts in Netbox for Syncthing Replica Host
+  uri:
+    url: "{{ netbox_url }}/api/virtualization/virtual-machines/?q={{ inventory_hostname }}"
+    method: GET
+    headers:
+      Authorization: "Token {{ netbox_token }}"
+    return_content: yes
+  delegate_to: localhost
+  register: netbox_replica_host_result
+
+- name: Set Replica Host fact
+  set_fact:
+    syncthing_replica_host: "{{ netbox_replica_host_result.json.results[0].custom_fields.SyncthingReplicaHost.name }}"
+
+- name: Query Replica Host in Netbox for Partners Syncthing GUID
+  uri:
+    url: "{{ netbox_url }}/api/virtualization/virtual-machines/?q={{ syncthing_replica_host }}"
+    method: GET
+    headers:
+      Authorization: "Token {{ netbox_token }}"
+    return_content: yes
+  delegate_to: localhost
+  register: netbox_replica_guid_result
+
+- name: Set Replica Hosts GUID fact
+  set_fact:
+    syncthing_replica_guid: "{{ netbox_replica_guid_result.json.results[0].custom_fields.SyncthingGUID }}"
