@@ -1,10 +1,11 @@
 ---
 - name: Store device ID in global map on localhost
   ansible.builtin.set_fact:
-    syncthing_device_map: "{{ syncthing_device_map | default({}) | combine({inventory_hostname: syncthing_device_id}) }}"
+    syncthing_device_map: "{{ hostvars['localhost'].syncthing_device_map | default({}) | combine({inventory_hostname: syncthing_device_id}) }}"
   delegate_to: localhost
   delegate_facts: true
   when: syncthing_devices | default([]) | length == 0
+  throttle: 1
 
 - name: Build list of remote devices from global map
   ansible.builtin.set_fact:
