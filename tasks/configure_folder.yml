@@ -93,17 +93,35 @@
     loop_var: folder
     label: "{{ folder.id }}"
 
+- name: Build folders with default devices
+  ansible.builtin.set_fact:
+    _folders_with_devices: >-
+      {{
+        syncthing_folders | map('combine', {'_default_devices': syncthing_devices | map(attribute='id') | list})
+        | list
+      }}
+
+- name: Set devices per folder
+  ansible.builtin.set_fact:
+    _folders_with_devices: >-
+      {{
+        _folders_with_devices | map('combine', {'devices': item.devices | default(item._default_devices)})
+        | list
+      }}
+  loop: "{{ _folders_with_devices }}"
+  loop_control:
+    label: "{{ item.id }}"
+
 - name: Share folder with devices
   ansible.builtin.command:
     cmd: "{{ syncthing_binary_path }} cli config folders {{ item.0.id }} devices add --device-id {{ item.1 }}"
   become: true
   become_user: "{{ syncthing_user }}"
-  when: item.0.devices is defined
   changed_when: true
   register: _share_folder_result
   failed_when:
     - _share_folder_result.rc != 0
-    - "'already shared' not in _share_folder_result.stderr | default('')"
-  loop: "{{ syncthing_folders | subelements('devices', skip_missing=True) }}"
+    - "'already' not in _share_folder_result.stderr | default('') | lower"
+  loop: "{{ _folders_with_devices | subelements('devices') }}"
   loop_control:
     label: "{{ item.0.id }} -> {{ item.1 }}"
