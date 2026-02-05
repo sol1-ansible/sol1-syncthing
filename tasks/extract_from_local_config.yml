@@ -18,14 +18,25 @@
   ansible.builtin.set_fact:
     syncthing_api_key: "{{ _syncthing_api_key_result.matches[0].apikey }}"
 
-- name: Extract Device ID from local Syncthing config
-  community.general.xml:
-    path: "{{ syncthing_config_file }}"
-    xpath: /configuration/device
-    content: attribute
-  register: _syncthing_device_id_result
+- name: Wait for Syncthing CLI to be ready
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli show system"
   become: true
+  become_user: "{{ syncthing_user }}"
+  register: _cli_ready
+  until: _cli_ready.rc == 0
+  retries: 10
+  delay: 5
+  changed_when: false
+
+- name: Extract local Device ID using CLI
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} --device-id"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  register: _syncthing_device_id_result
+  changed_when: false
 
 - name: Set Device ID fact
   ansible.builtin.set_fact:
-    syncthing_device_id: "{{ _syncthing_device_id_result.matches[0].device.id }}"
+    syncthing_device_id: "{{ _syncthing_device_id_result.stdout | trim }}"
