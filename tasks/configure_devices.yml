@@ -3,30 +3,42 @@
   ansible.builtin.debug:
     msg: "Host {{ inventory_hostname }} has device ID: {{ syncthing_device_id }}"
 
-- name: Store device ID in global map on localhost
+- name: Build device map from all hosts (run once)
   ansible.builtin.set_fact:
-    syncthing_device_map: "{{ hostvars['localhost'].syncthing_device_map | default({}) | combine({inventory_hostname: syncthing_device_id}) }}"
-  delegate_to: localhost
-  delegate_facts: true
+    syncthing_device_map: "{{ syncthing_device_map | default({}) | combine({item: hostvars[item].syncthing_device_id}) }}"
+  loop: "{{ ansible_play_hosts }}"
+  run_once: true
   when: syncthing_devices | default([]) | length == 0
-  throttle: 1
 
-- name: Debug - Show current device map on localhost
+- name: Debug - Show device map
   ansible.builtin.debug:
-    msg: "Device map on localhost: {{ hostvars['localhost'].syncthing_device_map | default('NOT DEFINED') }}"
+    msg: "Device map: {{ syncthing_device_map | default('NOT DEFINED') }}"
+  run_once: true
 
-- name: Debug - Show ansible_play_hosts
-  ansible.builtin.debug:
-    msg: "ansible_play_hosts: {{ ansible_play_hosts }}"
-
-- name: Build list of remote devices from global map
+- name: Build list of remote devices (excluding self)
   ansible.builtin.set_fact:
-    syncthing_devices: "{{ syncthing_devices | default([]) + [{'id': hostvars['localhost'].syncthing_device_map[item], 'name': item, 'auto_accept': true}] }}"
-  loop: "{{ ansible_play_hosts | default([]) }}"
+    syncthing_devices: >-
+      {{
+        syncthing_device_map | default({})
+        | dict2items
+        | rejectattr('key', 'equalto', inventory_hostname)
+        | map(attribute='value')
+        | map('community.general.dict_kv', 'id')
+        | list
+        | zip(
+            syncthing_device_map | default({})
+            | dict2items
+            | rejectattr('key', 'equalto', inventory_hostname)
+            | map(attribute='key')
+            | map('community.general.dict_kv', 'name')
+            | list
+          )
+        | map('combine')
+        | list
+      }}
   when:
     - syncthing_devices | default([]) | length == 0
-    - hostvars['localhost'].syncthing_device_map is defined
-    - item in hostvars['localhost'].syncthing_device_map
+    - syncthing_device_map is defined
 
 - name: Debug - Show built syncthing_devices list
   ansible.builtin.debug:
