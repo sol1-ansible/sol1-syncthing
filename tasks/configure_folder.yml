@@ -13,7 +13,7 @@
 
 - name: Remove Syncthing default folder
   ansible.builtin.command:
-    cmd: "{{ syncthing_binary_path }} cli config folders default remove"
+    cmd: "{{ syncthing_binary_path }} cli config folders default delete"
   become: true
   become_user: "{{ syncthing_user }}"
   when: 
