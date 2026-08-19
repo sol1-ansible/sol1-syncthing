@@ -78,19 +78,13 @@
 
 - name: Configure explicit device addresses for peer devices
   ansible.builtin.command:
-    cmd: "{{ syncthing_binary_path }} cli config devices {{ device.id }} addresses set {{ _peer_address }}"
+    cmd: "{{ syncthing_binary_path }} cli config devices {{ _device_id }} addresses set {{ peer.protocol | default('tcp') }}://{{ peer.address }}:{{ peer.port | default(22000) }}"
   vars:
-    _peer_match: "{{ syncthing_peer_address | selectattr('host', 'equalto', device.name) | list | first | default({}) }}"
-    _peer_address: >-
-      {%- if _peer_match -%}
-      {{ _peer_match.protocol | default('tcp') }}://{{ _peer_match.address }}:{{ _peer_match.port | default(22000) }}
-      {%- else -%}
-      {{ device.addresses | default('dynamic') }}
-      {%- endif -%}
+    _device_id: "{{ syncthing_devices | selectattr('name', 'equalto', peer.host) | map(attribute='id') | first }}"
   become: true
   become_user: "{{ syncthing_user }}"
   changed_when: true
-  loop: "{{ syncthing_devices }}"
+  loop: "{{ syncthing_peer_address | rejectattr('host', 'equalto', inventory_hostname) | list }}"
   loop_control:
-    loop_var: device
-  when: device.name != inventory_hostname
+    loop_var: peer
+  when: syncthing_peer_address | length > 0
