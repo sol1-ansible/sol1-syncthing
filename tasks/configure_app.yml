@@ -34,3 +34,45 @@
   become_user: "{{ syncthing_user }}"
   changed_when: true
   no_log: true
+
+- name: Configure Syncthing relays enabled
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config options relays-enabled set {{ syncthing_relays_enabled | string | lower }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+
+- name: Configure Syncthing global discovery announce
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config options global-ann-enabled set {{ syncthing_global_announce | string | lower }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+
+- name: Configure Syncthing local discovery announce
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config options local-ann-enabled set {{ syncthing_local_announce | string | lower }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+
+- name: Configure Syncthing NAT traversal
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config options natenabled set {{ syncthing_nat_enabled | string | lower }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+
+- name: Configure Syncthing auto-upgrade interval (hours)
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config options auto-upgrade-intervalh set {{ syncthing_autoUpgradeIntervalHours }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
+
+- name: Configure Syncthing usage reporting
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config options uraccepted set {{ 1 if syncthing_usage_reporting else -1 }}"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  changed_when: true
