@@ -78,7 +78,7 @@
 
 - name: Configure explicit device addresses for peer devices
   ansible.builtin.command:
-    cmd: "{{ syncthing_binary_path }} cli config devices {{ syncthing_device_id }} addresses set {{ peer.protocol | default('tcp') }}://{{ peer.address }}:{{ peer.port | default(22000) }}"
+    cmd: "{{ syncthing_binary_path }} cli config devices {{ syncthing_device_id }} addresses add {{ peer.protocol | default('tcp') }}://{{ peer.address }}:{{ peer.port | default(22000) }}"
   become: true
   become_user: "{{ syncthing_user }}"
   changed_when: true
