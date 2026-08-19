@@ -5,6 +5,14 @@
 syncthing_gui_user: "admin"
 syncthing_gui_password: ""
 
+syncthing_peer_address: []
+# Example:
+# syncthing_peer_address: []
+#   - host: "replica-host"
+#     port: 22000
+#     protocol: "tcp"
+#     address: 10.0.0.1
+
 # Syncthing devices to pair with
 syncthing_devices: []
 # Example:
@@ -40,6 +48,7 @@ syncthing_folders: []
 #     rescan_interval: 300
 #     devices:
 #       - "DEVICE_ID_1"
+syncthing_remove_default_folder: false
 
 # Syncthing storage configuration
 syncthing_storage_root_dir: "/srv/syncthing"

@@ -11,6 +11,16 @@
   register: _syncthing_existing_folders
   changed_when: false
 
+- name: Remove Syncthing default folder
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} cli config folders default remove"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  when: 
+   - '"default" in _syncthing_existing_folders.stdout'
+   - syncthing_remove_default_folder 
+  changed_when: true
+
 - name: Set folder facts
   ansible.builtin.set_fact:
     _folder_path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
