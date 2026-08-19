@@ -79,10 +79,3 @@ syncthing_local_announce: false           # "localAnnounceEnabled": false
 syncthing_nat_enabled: false              # "natEnabled": false
 syncthing_autoUpgradeIntervalHours: 0     # "autoUpgradeIntervalH": 0  # not needed if you install via package manager
 syncthing_usage_reporting: false          # "urAccepted": -1
-
-
-
-
-
-,
-
