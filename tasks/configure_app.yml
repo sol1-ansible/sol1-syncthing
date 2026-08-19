@@ -72,7 +72,7 @@
 
 - name: Configure Syncthing usage reporting
   ansible.builtin.command:
-    cmd: "{{ syncthing_binary_path }} cli config options uraccepted set {{ 1 if syncthing_usage_reporting else -1 }}"
+    cmd: "{{ syncthing_binary_path }} cli config options uraccepted set -- {{ 1 if syncthing_usage_reporting else -1 }}"
   become: true
   become_user: "{{ syncthing_user }}"
   changed_when: true
