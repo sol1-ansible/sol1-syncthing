@@ -71,12 +71,60 @@
     index_var: folder_idx
     label: "{{ folder.id }}"
 
-- name: Ensure Syncthing user has access to folder
+- name: Set recursive ACL for Syncthing user on folder
   ansible.builtin.acl:
     path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
     entity: "{{ syncthing_user }}"
     etype: user
-    permissions: rwx
+    permissions: rwX
+    recursive: true
+    state: present
+  become: true
+  when: folder.owner | default(syncthing_user) != syncthing_user
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Set recursive default ACL for Syncthing user on folder
+  ansible.builtin.acl:
+    path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
+    entity: "{{ syncthing_user }}"
+    etype: user
+    permissions: rwX
+    default: true
+    recursive: true
+    state: present
+  become: true
+  when: folder.owner | default(syncthing_user) != syncthing_user
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Set recursive ACL for folder owner on folder
+  ansible.builtin.acl:
+    path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
+    entity: "{{ folder.owner | default(syncthing_user) }}"
+    etype: user
+    permissions: rwX
+    recursive: true
+    state: present
+  become: true
+  when: folder.owner | default(syncthing_user) != syncthing_user
+  loop: "{{ syncthing_folders }}"
+  loop_control:
+    loop_var: folder
+    label: "{{ folder.id }}"
+
+- name: Set recursive default ACL for folder owner on folder
+  ansible.builtin.acl:
+    path: "{{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}"
+    entity: "{{ folder.owner | default(syncthing_user) }}"
+    etype: user
+    permissions: rwX
+    default: true
+    recursive: true
     state: present
   become: true
   when: folder.owner | default(syncthing_user) != syncthing_user
@@ -135,3 +183,5 @@
   loop: "{{ _folders_with_devices | subelements('devices') }}"
   loop_control:
     label: "{{ item.0.id }} -> {{ item.1 }}"
+
+
