@@ -5,14 +5,6 @@
 syncthing_gui_user: "admin"
 syncthing_gui_password: ""
 
-syncthing_peer_address: []
-# Example:
-# syncthing_peer_address: []
-#   - host: "replica-host"
-#     port: 22000
-#     protocol: "tcp"
-#     address: 10.0.0.1
-
 # Syncthing devices to pair with
 syncthing_devices: []
 # Example:
@@ -20,6 +12,8 @@ syncthing_devices: []
 #   - id: "XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX"
 #     name: "replica-host"
 #     auto_accept: true
+#     addresses:
+#       - "tcp://10.0.0.1:22000"
 
 # Syncthing folders to sync
 syncthing_folders: []

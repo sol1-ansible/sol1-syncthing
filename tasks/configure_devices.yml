@@ -3,42 +3,57 @@
   ansible.builtin.debug:
     msg: "Host {{ inventory_hostname }} has device ID: {{ syncthing_device_id }}"
 
-- name: Build device map from all hosts (run once)
-  ansible.builtin.set_fact:
-    syncthing_device_map: "{{ syncthing_device_map | default({}) | combine({item: hostvars[item].syncthing_device_id}) }}"
-  loop: "{{ ansible_play_hosts }}"
-  run_once: true
-  when: syncthing_devices | default([]) | length == 0
-
-- name: Debug - Show device map
-  ansible.builtin.debug:
-    msg: "Device map: {{ syncthing_device_map | default('NOT DEFINED') }}"
-  run_once: true
-
-- name: Build list of remote devices (excluding self)
+- name: Build syncthing_devices - Ensure every host is represented in syncthing_devices
   ansible.builtin.set_fact:
     syncthing_devices: >-
-      {{
-        syncthing_device_map | default({})
-        | dict2items
-        | rejectattr('key', 'equalto', inventory_hostname)
-        | map(attribute='value')
-        | map('community.general.dict_kv', 'id')
-        | list
-        | zip(
-            syncthing_device_map | default({})
-            | dict2items
-            | rejectattr('key', 'equalto', inventory_hostname)
-            | map(attribute='key')
-            | map('community.general.dict_kv', 'name')
-            | list
-          )
-        | map('combine')
-        | list
-      }}
-  when:
-    - syncthing_devices | default([]) | length == 0
-    - syncthing_device_map is defined
+      {%- set out = syncthing_devices | list -%}
+      {%- for h in ansible_play_hosts_all -%}
+        {%- if h not in (out | map(attribute='name', default='') | list) -%}
+          {%- set _ = out.append({'name': h}) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ out }}
+
+- name: Build syncthing_devices - fill IDs from host vars
+  ansible.builtin.set_fact:
+    syncthing_devices: >-
+      {%- set out = [] -%}
+      {%- for d in syncthing_devices -%}
+        {%- set _ = out.append(d | combine({
+              'id': d.id | default('', true)
+                    or hostvars[d.name].syncthing_device_id | default('', true)
+            })) -%}
+      {%- endfor -%}
+      {{ out }}
+
+- name: Build syncthing_devices - fetch missing device IDs from non-play hosts
+  ansible.builtin.command:
+    cmd: "{{ syncthing_binary_path }} --device-id"
+  become: true
+  become_user: "{{ syncthing_user }}"
+  delegate_to: "{{ item }}"
+  loop: >-
+    {{ syncthing_devices
+       | selectattr('id', 'falsy')
+       | map(attribute='name')
+       | reject('in', ansible_play_hosts_all)
+       | list }}
+  register: fetched_ids
+  changed_when: false
+
+- name: Build syncthing_devices - merge fetched IDs back in
+  ansible.builtin.set_fact:
+    syncthing_devices: >-
+      {%- set found = dict(fetched_ids.results
+                           | map(attribute='item')
+                           | zip(fetched_ids.results | map(attribute='stdout') | map('trim'))) -%}
+      {%- set out = [] -%}
+      {%- for d in syncthing_devices -%}
+        {%- set _ = out.append(d | combine({
+              'id': d.id | default('', true) or found[d.name] | default('')
+            })) -%}
+      {%- endfor -%}
+      {{ out }}
 
 - name: Debug - Show built syncthing_devices list
   ansible.builtin.debug:
@@ -66,6 +81,31 @@
   loop_control:
     loop_var: device
 
+- name: Set replica device addresses via Syncthing REST API
+  ansible.builtin.uri:
+    url: "{{ syncthing_api_url }}/rest/config/devices"
+    method: POST
+    headers:
+      X-API-Key: "{{ syncthing_api_key }}"
+    body_format: json
+    body:
+      deviceID: "{{ device.id }}"
+      name: "{{ device.name }}"
+      addresses: "{{ _device_addresses }}"
+    validate_certs: "{{ syncthing_api_verify_ssl }}"
+    status_code: [200, 201, 204]
+  vars:
+    _device_addresses: >-
+      {%- set out = [] -%}
+      {%- for a in device.addresses | default([]) -%}
+        {%- set _ = out.append(a | string) -%}
+      {%- endfor -%}
+      {{ out if out else ['dynamic'] }}
+  loop: "{{ syncthing_devices }}"
+  loop_control:
+    loop_var: device
+    label: "{{ device.name }}"
+
 - name: Configure auto-accept for replica devices
   ansible.builtin.command:
     cmd: "{{ syncthing_binary_path }} cli config devices {{ device.id }} auto-accept-folders set {{ device.auto_accept | default(true) | string | lower }}"
@@ -76,13 +116,3 @@
   loop_control:
     loop_var: device
 
-- name: Configure explicit device addresses for peer devices
-  ansible.builtin.command:
-    cmd: "{{ syncthing_binary_path }} cli config devices {{ syncthing_device_id }} addresses add {{ peer.protocol | default('tcp') }}://{{ peer.address }}:{{ peer.port | default(22000) }}"
-  become: true
-  become_user: "{{ syncthing_user }}"
-  changed_when: true
-  loop: "{{ syncthing_peer_address | rejectattr('host', 'equalto', inventory_hostname) | list }}"
-  loop_control:
-    loop_var: peer
-  when: syncthing_peer_address | length > 0
