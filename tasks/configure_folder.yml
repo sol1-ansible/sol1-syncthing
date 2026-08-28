@@ -142,6 +142,7 @@
       --path {{ folder.path | default(syncthing_storage_root_dir + '/' + folder.id) }}/
       --type {{ folder.type | default('sendonly') }}
       --rescan-intervals {{ folder.rescan_interval | default(300) }}
+      --ignore-perms 
   become: true
   become_user: "{{ syncthing_user }}"
   when: folder.id not in _syncthing_existing_folders.stdout
